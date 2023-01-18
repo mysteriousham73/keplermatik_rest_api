@@ -24,11 +24,10 @@
 #     delete this exception statement from your version. If you delete this
 #     exception statement from all source files in the program, then also delete
 #     it in the license file.
-import warnings
-import json
-from skyfield.api import EarthSatellite, load, wgs84
+
 import keplermatik_satellites
 from fastapi import FastAPI
+from pydantic import BaseModel
 import uvicorn
 
 app = FastAPI()
@@ -40,6 +39,18 @@ if __name__ == "__main__":
     server = uvicorn.Server(config)
     server.run()
 
+class Prediction(BaseModel):
+    norad_cat_id: int
+    latitude: float
+    longitude: float
+    events: list
+
+class PredictionRequest(BaseModel):
+    norad_cat_id: int
+    observer_latitude: float
+    observer_longitude: float
+    #prediction: Prediction
+
 
 @app.get("/")
 async def root():
@@ -47,3 +58,14 @@ async def root():
     satellite.predict_now(38.951561, -92.328636)
 
     return {"satellite": {"norad_cat_id": satellite.norad_cat_id, "latitude": satellite.latitude, "longitude": satellite.longitude}}
+
+@app.post("/predict_now/")
+async def create_item(prediction_request: PredictionRequest):
+
+    satellite = satellites[prediction_request.norad_cat_id]
+    satellite.predict_now(38.951561, -92.328636)
+    events = satellite.satellite_events.events
+
+    prediction = Prediction(norad_cat_id = satellite.norad_cat_id, latitude = satellite.latitude,longitude = satellite.longitude, events=events)
+
+    return prediction

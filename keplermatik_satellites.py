@@ -38,6 +38,24 @@ from time import time, sleep
 import re, numpy as np
 
 
+class SatelliteEvents:
+    def __init__(self):
+        self.current_time = ""
+        self.events = []
+
+class SatelliteEvent:
+    def __init__(self):
+        self.datetime_string = ""
+        self.event_type = ""
+
+    def __init(self, datetime_string, event_type):
+        self.datetime_string = datetime_string
+        self.event_type = event_type
+
+    def __repr__(self):
+        return "event=(" + self.datetime_string + ", " + self.event_type + ")"
+
+
 class Satellites(dict):
 
     def __init__(self):
@@ -202,6 +220,7 @@ class Satellite(object):
         self.norad_cat_id = 0
         self.elevation = 0
         self.current_time_resolution = 1
+        self.satellite_events = SatelliteEvents()
         for name, value in data.items():
             setattr(self, name, self._wrap(value))
 
@@ -282,10 +301,31 @@ class Satellite(object):
 
         for uuid, transmitter in self.transmitters.items():
             transmitter.range_rate = self.range_rate
+        event_types = ["rise", "culmination", "set"]
+        t_tomorrow = tscale + 1
 
-        #if self.elevation.degrees > 0:
-            #print(self.name + '(' + str(self.norad_cat_id) + ') is above the horizon')
-        #    pass
+        # 0 — Satellite rose above ``altitude_degrees``.
+        # 1 — Satellite culminated and started to descend again.
+        # 2 — Satellite fell below ``altitude_degrees``.
+
+        sat_events = sat.find_events(here, tscale, t_tomorrow, altitude_degrees=20.0)
+        t, events = sat.find_events(here, tscale, t_tomorrow, altitude_degrees=20.0)
+
+        # print(f"{sat_events} ")
+
+        self.satellite_events.current_time = tscale.utc_iso()
+        for i, event_time in enumerate(sat_events[0]):
+            event = SatelliteEvent()
+            event.datetime_string = event_time.utc_iso()
+            event.event_type = event_types[sat_events[1][i]]
+            self.satellite_events.events.append(event)
+
+        if self.norad_cat_id == 25544:
+
+            for ti, event in zip(t, events):
+                name = ('rise above 20°', 'culminate', 'set below 20°')[event]
+                print(ti.utc_strftime('%Y %b %d %H:%M:%S'), name)
+        print("")
 
     def __repr__(self):
         return str(self.__dict__)
