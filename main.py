@@ -25,13 +25,13 @@
 #     exception statement from all source files in the program, then also delete
 #     it in the license file.
 
-import keplermatik_satellites
+from keplermatik_satellites import Satellites
 from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
 
 app = FastAPI()
-satellites = keplermatik_satellites.Satellites()
+satellites = Satellites()
 
 if __name__ == "__main__":
 
@@ -39,11 +39,15 @@ if __name__ == "__main__":
     server = uvicorn.Server(config)
     server.run()
 
+
+
 class Prediction(BaseModel):
     norad_cat_id: int
     latitude: float
     longitude: float
-    events: list
+    rise_time: str
+    set_time: str
+    maximum_elevation: str
 
 class PredictionRequest(BaseModel):
     norad_cat_id: int
@@ -51,21 +55,20 @@ class PredictionRequest(BaseModel):
     observer_longitude: float
     #prediction: Prediction
 
-
-@app.get("/")
-async def root():
-    satellite = satellites[25544]
-    satellite.predict_now(38.951561, -92.328636)
-
-    return {"satellite": {"norad_cat_id": satellite.norad_cat_id, "latitude": satellite.latitude, "longitude": satellite.longitude}}
+#
+# @app.get("")
+# async def root():
+#     satellite = satellites[25544]
+#     satellite.predict_now(38.951561, -92.328636)
+#
+#     return {"satellite": {"norad_cat_id": satellite.norad_cat_id, "latitude": satellite.latitude, "longitude": satellite.longitude}}
 
 @app.post("/predict_now/")
 async def create_item(prediction_request: PredictionRequest):
 
     satellite = satellites[prediction_request.norad_cat_id]
     satellite.predict_now(38.951561, -92.328636)
-    events = satellite.satellite_events.events
 
-    prediction = Prediction(norad_cat_id = satellite.norad_cat_id, latitude = satellite.latitude,longitude = satellite.longitude, events=events)
-
+    prediction = Prediction(norad_cat_id=satellite.norad_cat_id, latitude=satellite.latitude, longitude=satellite.longitude, rise_time=satellite.next_pass.rise_time, set_time=satellite.next_pass.set_time, maximum_elevation=str(round(satellite.next_pass.maximum_elevation, 2)) + " degrees")
+    print(prediction)
     return prediction

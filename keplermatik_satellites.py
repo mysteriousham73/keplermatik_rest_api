@@ -43,6 +43,7 @@ class SatelliteEvents:
         self.current_time = ""
         self.events = []
 
+
 class SatelliteEvent:
     def __init__(self):
         self.datetime_string = ""
@@ -54,6 +55,14 @@ class SatelliteEvent:
 
     def __repr__(self):
         return "event=(" + self.datetime_string + ", " + self.event_type + ")"
+
+
+class SatellitePass:
+    def __init__(self):
+        self.rise_time = ""
+        self.set_time = ""
+        self.culimnation_time = ""
+        self.maximum_elevation = ""
 
 
 class Satellites(dict):
@@ -220,7 +229,9 @@ class Satellite(object):
         self.norad_cat_id = 0
         self.elevation = 0
         self.current_time_resolution = 1
-        self.satellite_events = SatelliteEvents()
+        #self.satellite_events = SatelliteEvents()
+        self.next_pass = SatellitePass()
+
         for name, value in data.items():
             setattr(self, name, self._wrap(value))
 
@@ -313,19 +324,65 @@ class Satellite(object):
 
         # print(f"{sat_events} ")
 
-        self.satellite_events.current_time = tscale.utc_iso()
-        for i, event_time in enumerate(sat_events[0]):
-            event = SatelliteEvent()
-            event.datetime_string = event_time.utc_iso()
-            event.event_type = event_types[sat_events[1][i]]
-            self.satellite_events.events.append(event)
 
-        if self.norad_cat_id == 25544:
+        # self.satellite_events.current_time = tscale.utc_iso()
+        # for i, event_time in enumerate(sat_events[0]):
+        #     event = SatelliteEvent()
+        #     event.datetime_string = event_time.utc_iso()
+        #     event.event_type = event_types[sat_events[1][i]]
+        #     self.satellite_events.events.append(event)
 
-            for ti, event in zip(t, events):
-                name = ('rise above 20°', 'culminate', 'set below 20°')[event]
-                print(ti.utc_strftime('%Y %b %d %H:%M:%S'), name)
-        print("")
+        event = SatelliteEvent
+        next_event_time = sat_events[0][0]
+        event.datetime_string = next_event_time.utc_iso()
+        event.event_type = event_types[sat_events[1][0]]
+        self.next_pass = event
+
+        event_types = sat_events[1]
+        event_times = sat_events[0]
+
+        first_rise = 0
+        first_culmination = 0
+        first_set = 0
+
+        for i, event_type in enumerate(event_types):
+            if event_type == 0:  #rise above threshold
+                first_rise = i
+                break
+
+        for i, event_type in enumerate(event_types):
+            if event_type == 1:
+                first_culmination = i
+                break
+
+        for i, event_type in enumerate(event_types):
+            if event_type == 2:
+                first_set = i
+                break
+
+        self.next_pass.rise_time = event_times[first_rise].utc_strftime('%B %d %Y at %I:%M %p UTC')
+        self.next_pass.culimnation_time = event_times[first_culmination].utc_strftime('%B %d %Y at %I:%M %p')
+        self.next_pass.set_time = event_times[first_set].utc_strftime('%B %d %Y at %I:%M %p')
+
+        geocentric = sat.at(event_times[first_culmination])
+
+        here = wgs84.latlon(observer_latitude, observer_longitude)
+        difference = sat - here
+        topocentric = difference.at(event_times[first_culmination])
+
+        elevation, azimuth, range = topocentric.altaz()
+        elevation = float(elevation.degrees)
+
+        self.next_pass.maximum_elevation = elevation
+
+
+
+        # if self.norad_cat_id == 25544:
+        #
+        #     for ti, event in zip(t, events):
+        #         name = ('rise above 20°', 'culminate', 'set below 20°')[event]
+        #         print(ti.utc_strftime('%Y %b %d %H:%M:%S'), name)
+        # print("")
 
     def __repr__(self):
         return str(self.__dict__)
