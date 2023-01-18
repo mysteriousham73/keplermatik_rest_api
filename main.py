@@ -63,6 +63,15 @@ class PredictionRequest(BaseModel):
 #
 #     return {"satellite": {"norad_cat_id": satellite.norad_cat_id, "latitude": satellite.latitude, "longitude": satellite.longitude}}
 
+@app.get("/satellite_list/")
+async def satellite_list():
+    satellite_list = {}
+    for norad_cat_id, satellite in satellites.items():
+        satellite_list[satellite.name.upper()] = norad_cat_id
+    #print(satellite_list)
+    return satellite_list
+
+
 @app.post("/predict_now/")
 async def create_item(prediction_request: PredictionRequest):
 
