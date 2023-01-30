@@ -35,7 +35,7 @@ satellites = Satellites()
 
 if __name__ == "__main__":
 
-    config = uvicorn.Config("main:app", host="127.0.0.1", port=8001, log_level="info")
+    config = uvicorn.Config("main:app", host="192.168.1.2", port=8001, log_level="info")
     server = uvicorn.Server(config)
     server.run()
 
@@ -43,6 +43,7 @@ if __name__ == "__main__":
 
 class Prediction(BaseModel):
     norad_cat_id: int
+    satellite_name: str
     latitude: float
     longitude: float
     rise_time: str
@@ -61,7 +62,7 @@ class PredictionRequest(BaseModel):
 #     satellite = satellites[25544]
 #     satellite.predict_now(38.951561, -92.328636)
 #
-#     return {"satellite": {"norad_cat_id": satellite.norad_cat_id, "latitude": satellite.latitude, "longitude": satellite.longitude}}
+#     return {"satellite": {"norad_cat_id": satellite.norad_cat_id, "latitude": satellite.latitude, "longitude": satellite.longitude}
 
 @app.get("/satellite_list/")
 async def satellite_list():
@@ -76,8 +77,8 @@ async def satellite_list():
 async def create_item(prediction_request: PredictionRequest):
 
     satellite = satellites[prediction_request.norad_cat_id]
-    satellite.predict_now(38.951561, -92.328636)
+    satellite.predict_now(37.7821, -122.4054)
 
-    prediction = Prediction(norad_cat_id=satellite.norad_cat_id, latitude=satellite.latitude, longitude=satellite.longitude, rise_time=satellite.next_pass.rise_time, set_time=satellite.next_pass.set_time, maximum_elevation=str(round(satellite.next_pass.maximum_elevation, 2)) + " degrees")
+    prediction = Prediction(satellite_name=satellite.name, norad_cat_id=satellite.norad_cat_id, latitude=str(round(float(satellite.latitude), 2)), longitude=str(round(float(satellite.longitude), 2)), rise_time=satellite.next_pass.rise_time, set_time=satellite.next_pass.set_time, maximum_elevation=str(round(satellite.next_pass.maximum_elevation, 2)) + " degrees")
     print(prediction)
     return prediction
