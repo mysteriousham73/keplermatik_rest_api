@@ -40,7 +40,6 @@ if __name__ == "__main__":
     server.run()
 
 
-
 class Prediction(BaseModel):
     norad_cat_id: int
     latitude: float
@@ -53,31 +52,47 @@ class PredictionRequest(BaseModel):
     norad_cat_id: int
     observer_latitude: float
     observer_longitude: float
-    #prediction: Prediction
 
-#
-# @app.get("")
-# async def root():
-#     satellite = satellites[25544]
-#     satellite.predict_now(38.951561, -92.328636)
-#
-#     return {"satellite": {"norad_cat_id": satellite.norad_cat_id, "latitude": satellite.latitude, "longitude": satellite.longitude}}
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
 
-@app.get("/satellite_list/")
-async def satellite_list():
-    satellite_list = {}
+
+@app.get("/satellites_by_name/")
+async def satellites_by_name():
+    satellites_by_name = {}
     for norad_cat_id, satellite in satellites.items():
-        satellite_list[satellite.name.upper()] = norad_cat_id
-    #print(satellite_list)
-    return satellite_list
+        satellites_by_name[satellite.name.upper()] = norad_cat_id
+    print(satellites_by_name)
 
+    return satellites_by_name
+
+@app.get("/satellites_by_norad_cat_id/")
+async def satellites_by_norad_cat_id():
+    satellites_by_norad_cat_id = {}
+    for norad_cat_id, satellite in satellites.items():
+        satellites_by_norad_cat_id[norad_cat_id] = satellite.name.upper()
+
+    test = ""
+    return satellites_by_norad_cat_id
 
 @app.post("/predict_now/")
-async def create_item(prediction_request: PredictionRequest):
+async def predict_now(prediction_request: PredictionRequest):
 
-    satellite = satellites[prediction_request.norad_cat_id]
-    satellite.predict_now(38.951561, -92.328636)
+    observer_latitude = prediction_request.observer_latitude
+    observer_longitude = prediction_request.observer_longitude
+    norad_cat_id = prediction_request.norad_cat_id
 
-    prediction = Prediction(norad_cat_id=satellite.norad_cat_id, latitude=satellite.latitude, longitude=satellite.longitude, rise_time=satellite.next_pass.rise_time, set_time=satellite.next_pass.set_time, maximum_elevation=str(round(satellite.next_pass.maximum_elevation, 2)) + " degrees")
-    print(prediction)
+    satellite = satellites[norad_cat_id]
+    satellite.predict_now(observer_latitude, observer_longitude)
+
+    maximum_elevation = str(round(satellite.passes[0].maximum_elevation, 2)) + " degrees"
+
+    prediction = Prediction(norad_cat_id=satellite.norad_cat_id,
+                            latitude=satellite.latitude,
+                            longitude=satellite.longitude,
+                            rise_time=satellite.passes[0].rise_time,
+                            set_time=satellite.passes[0].set_time,
+                            maximum_elevation=maximum_elevation)
+
     return prediction
